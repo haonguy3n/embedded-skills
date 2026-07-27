@@ -1,49 +1,43 @@
-# Embedded Linux / Yocto Skills
+# Embedded Linux / Yocto skill
 
-A set of Claude Code **skills** encoding senior-level Yocto / BitBake / kernel / BSP
-practice.
+A single Claude Code **skill** encoding senior-level Yocto / BitBake / kernel / BSP practice.
 
-These are **platform-neutral**. They were written by studying how the Yocto Project
-reference documentation and the major upstream BSP layers — `meta-freescale`/`meta-imx`
-(NXP), `meta-tegra` (NVIDIA/OE4T), `meta-qcom` (Qualcomm), and OpenBMC — solve the same
-recurring problems, and then extracting the *pattern* rather than the vendor's spelling of
-it. Examples use `<soc>` / `myboard` / `linux-vendor` placeholders; substitute your silicon.
-
-Upstream layers are named only where they are cited as evidence that a pattern is real and
-battle-tested.
+It is **platform-neutral**. It was written by studying how the Yocto Project reference
+documentation and the major upstream BSP layers — `meta-freescale`/`meta-imx` (NXP),
+`meta-tegra` (NVIDIA/OE4T), `meta-qcom` (Qualcomm), and OpenBMC — solve the same recurring
+problems, and then extracting the *pattern* rather than the vendor's spelling of it. Examples
+use `<soc>` / `myboard` / `linux-vendor` placeholders; substitute your silicon. Upstream layers
+are named only where they are cited as evidence that a pattern is real and battle-tested.
 
 ## Install
 
-Skills are discovered from `~/.claude/skills/<name>/SKILL.md`. Symlink them:
+Skills are discovered from `~/.claude/skills/<name>/SKILL.md`. Symlink it:
 
 ```bash
-./install.sh                           # symlinks every skill into ~/.claude/skills
+./install.sh                           # symlinks into ~/.claude/skills
 ./install.sh --project /path/to/repo   # or into <repo>/.claude/skills
 ```
 
-Or manually:
+## Layout
 
-```bash
-ln -s /home/hao/work/skills/yocto-build-triage ~/.claude/skills/yocto-build-triage
-```
+`SKILL.md` is a lean core — override-syntax detection, assignment operators, `OVERRIDES`
+precedence, where a setting belongs, the inspection commands, and the `tmp/work` layout — plus
+a routing table. Everything else lives in `references/`, loaded only when the task needs it.
 
-## The skills
-
-| Skill | Use it when |
+| Reference | Covers |
 |---|---|
-| [`yocto-bitbake-core`](yocto-bitbake-core/SKILL.md) | Reasoning about variable expansion, overrides, task graph, signatures, datastore |
-| [`yocto-build-triage`](yocto-build-triage/SKILL.md) | A build failed and you need a systematic root-cause loop |
-| [`yocto-recipe-authoring`](yocto-recipe-authoring/SKILL.md) | Writing, upgrading, or packaging a recipe |
-| [`yocto-layer-and-bsp`](yocto-layer-and-bsp/SKILL.md) | Creating layers, machine/distro configs, bbappends, board bring-up |
-| [`yocto-bsp-patterns`](yocto-bsp-patterns/SKILL.md) | Designing a BSP that scales past the first board — the cross-vendor patterns |
-| [`yocto-kernel-dev`](yocto-kernel-dev/SKILL.md) | Kernel recipes, config fragments, patches, out-of-tree modules, device trees |
-| [`yocto-bootloader-secureboot`](yocto-bootloader-secureboot/SKILL.md) | Boot chain integration, boot containers, media offsets, signing and secure boot |
-| [`yocto-image-wic-deploy`](yocto-image-wic-deploy/SKILL.md) | Image recipes, IMAGE_FSTYPES, wic/.wks, initramfs, flashing artifacts |
-| [`yocto-devtool-workflow`](yocto-devtool-workflow/SKILL.md) | Fast edit/build/deploy iteration on a component |
-| [`yocto-build-performance`](yocto-build-performance/SKILL.md) | Slow builds, sstate misses, CI caching, reproducibility |
-| [`yocto-security-compliance`](yocto-security-compliance/SKILL.md) | CVE scanning, SBOM/SPDX, license compliance, source archiving |
-| [`yocto-testing`](yocto-testing/SKILL.md) | ptest, testimage, oe-selftest, layer validation |
-| [`yocto-migration-upgrade`](yocto-migration-upgrade/SKILL.md) | Moving between Yocto releases; override-syntax conversion |
+| [`triage.md`](yocto/references/triage.md) | Build failures: logs, devshell, QA taxonomy, fetch/patch/configure/rootfs/sysroot/sstate errors |
+| [`recipes.md`](yocto/references/recipes.md) | Writing, upgrading and packaging recipes; PACKAGECONFIG, FILES, services, licensing |
+| [`layers-bsp.md`](yocto/references/layers-bsp.md) | layer.conf, bbappends, machine/distro confs, board bring-up, and the cross-vendor BSP design patterns |
+| [`kernel.md`](yocto/references/kernel.md) | Kernel recipes, `.cfg`/`.scc` config, patching, device trees, out-of-tree modules |
+| [`boot.md`](yocto/references/boot.md) | Boot chain, U-Boot, boot containers, media offsets, FIT signing, fuses, A/B updates |
+| [`images.md`](yocto/references/images.md) | Image recipes, IMAGE_FSTYPES, wic/`.wks`, initramfs, SDK/eSDK |
+| [`devtool.md`](yocto/references/devtool.md) | Fast edit-build-deploy iteration, patch round-tripping, EXTERNALSRC |
+| [`performance.md`](yocto/references/performance.md) | sstate, hash equivalence, mirrors, CI caching, reproducible builds |
+| [`security.md`](yocto/references/security.md) | CVE triage, SPDX/SBOM, licence compliance, GPL source release, hardening |
+| [`testing.md`](yocto/references/testing.md) | ptest, testimage, oeqa cases, oe-selftest, buildhistory gates, CI |
+| [`migration.md`](yocto/references/migration.md) | Release map, the 3.4 override conversion, per-release breaking changes |
+| [`bitbake.md`](yocto/references/bitbake.md) | Deeper BitBake: Python/datastore, dependency kinds, signatures, task chain |
 
 ## Release-syntax note
 

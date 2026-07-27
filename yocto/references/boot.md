@@ -1,16 +1,9 @@
----
-name: yocto-bootloader-secureboot
-description: Bootloader and boot-chain integration in Yocto, platform-neutral — multi-stage boot models, U-Boot/UEFI recipe variables (UBOOT_MACHINE, UBOOT_CONFIG, SPL_BINARY, UBOOT_ENTRYPOINT, UBOOT_ENV, uboot-extlinux-config), assembling and deploying a signed boot container, media offsets, the bootloader environment and fw_env, FIT images and UBOOT_SIGN_*, SoC-level verified boot and fuse/key-provisioning discipline, and A/B or recovery update layouts. Use for boot bring-up, changing where boot artifacts live on media, adding image signing, or debugging a board that does not boot.
----
+# Bootloader, boot container & secure boot
 
-# Bootloader & secure boot
-
-Platform-neutral. Where a specific SoC family is named it is an example of the pattern, not
-the subject — substitute your own stage names.
+Platform-neutral. Named SoC families are examples of the pattern — substitute your own stage
+names.
 
 ## 1. Model the chain before touching anything
-
-Every modern SoC boots through several stages, each verifying the next:
 
 ```
 ROM (mask-programmed, immutable)
@@ -26,10 +19,10 @@ Before debugging, answer: **which stage produced the last output you saw?** "U-B
 boot" is nearly always a failure in a stage *below* U-Boot. Get the SoC's boot chapter from
 its reference manual; do not work from forum posts.
 
-Write the chain down in your BSP's README with the recipe that produces each stage. This
-document is the single highest-value artifact in a board bring-up.
+Write the chain down in your BSP's README with the recipe that produces each stage — the
+single highest-value artifact in a board bring-up.
 
-## 2. Bootloader recipe variables (U-Boot)
+## 2. U-Boot recipe variables
 
 ```bitbake
 PREFERRED_PROVIDER_virtual/bootloader = "u-boot-<flavour>"
@@ -52,13 +45,9 @@ UBOOT_LOCALVERSION = "-mycompany"
 ```
 
 Patch and configure U-Boot exactly like the kernel — `.bbappend` +
-`FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"`, patches in `SRC_URI`, and Kconfig
-fragments:
-```bitbake
-SRC_URI += "file://myboard.cfg"     # applied after the defconfig
-```
-Never carry a hand-edited full defconfig if the tree supports fragments — it makes every
-vendor bump a merge conflict.
+`FILESEXTRAPATHS:prepend`, patches in `SRC_URI`, and Kconfig fragments
+(`SRC_URI += "file://myboard.cfg"`, applied after the defconfig). Never carry a hand-edited
+full defconfig if the tree supports fragments — it makes every vendor bump a merge conflict.
 
 **Put boot policy in the U-Boot defconfig, not in a saved environment.** `CONFIG_BOOTCOMMAND`
 and `CONFIG_EXTRA_ENV_SETTINGS` are reproducible and versioned; a `saveenv`-ed environment on
@@ -66,8 +55,8 @@ a factory board is not.
 
 ## 3. The boot container
 
-On most current SoCs the ROM does not load `u-boot.bin` — it loads a signed container that a
-vendor stitching tool builds from several components. Treat it as its own recipe.
+On most current SoCs the ROM does not load `u-boot.bin` — it loads a signed container built by
+a vendor stitching tool from several components. Give it its own recipe.
 
 ```bitbake
 # boot-container_1.0.bb
@@ -91,20 +80,20 @@ BOOT_CONTAINER_TARGETS = "flash_myboard"
 EXTRA_IMAGEDEPENDS += "boot-container"
 ```
 
-Hard-won rules:
-* **Component versions are coupled.** DDR/PHY firmware ↔ ATF ↔ bootloader are tested as a
-  set by the silicon vendor. Pin all three together in the SoC family include. A mismatched
-  trio typically hangs *before any console output*, which is the worst failure to debug.
-* The container, not `u-boot.bin`, is what you flash. Deploying both invites someone to
-  flash the wrong one.
+* **Component versions are coupled.** DDR/PHY firmware ↔ ATF ↔ bootloader are tested as a set
+  by the silicon vendor. Pin all three together in the SoC family include. A mismatched trio
+  typically hangs *before any console output* — the worst failure to debug.
+* The container, not `u-boot.bin`, is what you flash. Deploying both invites someone to flash
+  the wrong one.
+* Machines select variants by a target variable, never by patching the recipe.
 
 ## 4. Media offsets — one definition, referenced everywhere
 
 The ROM looks for the container at a fixed offset that depends on the **SoC and the boot
-medium** (raw eMMC/SD vs boot partition vs NOR vs UFS LUN). Typical values run from 1 KiB to
-32/33 KiB; get yours from the reference manual.
-
-Define it once and consume it from every place that needs it:
+medium** (raw eMMC/SD vs boot partition vs NOR vs UFS LUN). Typical values run 1 KiB to
+32/33 KiB; get yours from the reference manual, not a forum post. The offset belongs to the
+**SoC**, not the board — put it in the family include and override only when a board genuinely
+differs.
 
 ```bitbake
 # SoC family include
@@ -116,20 +105,18 @@ part --source rawcopy --sourceparams="file=boot-container-${MACHINE}.bin" \
      --ondisk mmcblk --no-table --align 1 --offset ${BOOT_MEDIA_OFFSET_KIB}k
 ```
 Any documented `dd` command, flashing script, or CI check must read the same variable.
-Duplicated offsets are how boards get bricked six months after bring-up.
+Duplicated offsets are how boards get bricked six months after bring-up, and a wrong offset is
+the #1 unbootable-board cause.
 
-Also note: on SoCs that boot from an eMMC **boot partition** rather than the user area, the
-offset is different *and* `mmc bootpart enable` / `mmc partconf` must be set — that
-configuration is board state, so it belongs in your provisioning step, not in a wiki.
+On SoCs that boot from an eMMC **boot partition** rather than the user area, the offset is
+different *and* `mmc bootpart enable` / `mmc partconf` must be set — that is board state, so it
+belongs in your provisioning step, not a wiki.
 
 ## 5. Handing off to the kernel
 
-Three common mechanisms — pick one per BSP and be consistent:
+Pick one per BSP and be consistent.
 
-**Boot script**
-```bitbake
-UBOOT_ENV = "boot"        # ships boot.txt, deploys boot.scr
-```
+**Boot script** — `UBOOT_ENV = "boot"` (ships `boot.txt`, deploys `boot.scr`).
 
 **extlinux (distro boot)**
 ```bitbake
@@ -141,8 +128,8 @@ UBOOT_EXTLINUX_FDT:default = "/myboard.dtb"
 UBOOT_EXTLINUX_ROOT = "root=PARTUUID=..."
 UBOOT_EXTLINUX_KERNEL_ARGS = "rootwait rw console=ttyS1,115200 earlycon"
 ```
-extlinux is the most portable option and the one vendor BSPs increasingly standardise on —
-it keeps kernel/DT/initrd selection out of compiled bootloader logic.
+The most portable option and the one vendor BSPs increasingly standardise on — it keeps
+kernel/DT/initrd selection out of compiled bootloader logic.
 
 **FIT image** — kernel + DT(s) + initramfs in one signed container; see §7.
 
@@ -153,20 +140,17 @@ Whichever you choose, keep `earlycon`/`earlyprintk` in the cmdline during bring-
 ```bitbake
 IMAGE_INSTALL:append = " libubootenv-bin"     # or u-boot-fw-utils on older trees
 ```
-Ship a machine-specific `/etc/fw_env.config`:
+Ship a machine-specific `/etc/fw_env.config`, in a machine subdirectory so it cannot leak to
+another board (`recipes-bsp/u-boot/u-boot-fw-utils/myboard/fw_env.config`):
 ```
 # device            offset      env size    sector size
 /dev/mmcblk0        0xC0000     0x2000      0x200
 /dev/mmcblk0        0xC2000     0x2000      0x200      # redundant copy
 ```
-Put it in a machine subdirectory so it cannot leak to another board:
-`recipes-bsp/u-boot/u-boot-fw-utils/myboard/fw_env.config`.
-
 A wrong offset here silently corrupts the environment on first write. Verify with
-`fw_printenv` on a board you can re-flash, before it ships.
-
-If anything (update agent, slot switcher) writes the environment, use the **redundant**
-two-copy layout — a power cut during a single-copy write leaves an unbootable board.
+`fw_printenv` on a board you can re-flash, before it ships. If anything (update agent, slot
+switcher) writes the environment, use the **redundant** two-copy layout — a power cut during a
+single-copy write leaves an unbootable board.
 
 ## 7. FIT images and verified boot
 
@@ -183,60 +167,57 @@ FIT_SIGN_INDIVIDUAL = "1"
 UBOOT_MKIMAGE_DTCOPTS = "-I dts -O dtb -p 2000"
 ```
 
-The public key is injected into U-Boot's control DTB, so:
-* U-Boot must be rebuilt whenever keys change, and
-* **the U-Boot that verifies the FIT must itself be verified by the stage below it.**
-  A signed FIT under an unsigned bootloader buys nothing — an attacker replaces U-Boot.
+The public key is injected into U-Boot's control DTB, so U-Boot must be rebuilt whenever keys
+change — and **the U-Boot that verifies the FIT must itself be verified by the stage below
+it.** A signed FIT under an unsigned bootloader buys nothing; an attacker replaces U-Boot.
 
 Key handling:
 * Private keys never in the layer, never in git. Reference a directory via a variable so the
   build **fails loudly** when it is absent rather than silently producing unsigned output.
-* Development keys and production keys must be visibly different (different `KEYNAME`), and
-  CI must be able to assert which one an artifact was signed with.
-* Add a build-time check that release images are signed — an unsigned release image that
-  boots fine is the easiest mistake to ship.
+* Development and production keys must be visibly different (different `KEYNAME`), and CI must
+  be able to assert which one an artifact was signed with.
+* Add a build-time check that release images are signed — an unsigned release image that boots
+  fine is the easiest mistake to ship.
 
 ## 8. SoC-level verified boot (fuses)
 
-Vendors differ in naming (HAB/AHAB, Secure Boot with fused OEM keys, eFuse-backed RoT) but
-the shape is identical:
+Vendors differ in naming (HAB/AHAB, fused OEM keys, eFuse-backed RoT) but the shape is
+identical:
 
-1. Generate a key hierarchy with the vendor's signing tool; derive a **key hash** to be
-   fused.
+1. Generate a key hierarchy with the vendor's signing tool; derive a **key hash** to be fused.
 2. Sign the first-stage container; append the signature/certificate structure.
-3. Boot the signed image on an **open** (un-fused) part. Use the vendor's status command
-   from the bootloader to confirm **zero** verification events. An open part boots signed
-   images without checking them — "it booted" proves nothing here.
+3. Boot the signed image on an **open** (un-fused) part. Use the vendor's status command from
+   the bootloader to confirm **zero** verification events. An open part boots signed images
+   without checking them — "it booted" proves nothing here.
 4. Burn the key-hash fuses. Re-verify signed boot still works, still open.
 5. Only then blow the "close/secure" fuse. **This is irreversible.**
 
-Additional discipline that repeatedly proves its worth:
 * Do steps 3–5 on sacrificial boards first, with a written, reviewed runbook.
 * Fusing belongs in a dedicated manufacturing image/initramfs with logging, not in an
   engineer's shell history.
-* Keep a permanently-open engineering board set; once you close parts, JTAG and recovery
-  paths usually close too.
-* Plan key rotation and revocation *before* production. Most SoCs support a small number of
-  key slots; if you don't plan it, you get one key forever.
+* Keep a permanently-open engineering board set; once you close parts, JTAG and recovery paths
+  usually close too.
+* Plan key rotation and revocation *before* production. Most SoCs support a small number of key
+  slots; if you don't plan it, you get one key forever.
 
 ## 9. Update layouts
 
 | Layout | Shape | Trade-off |
 |---|---|---|
-| Single + recovery | one production slot, one minimal recovery slot | simple, smaller; recovery path must be exercised regularly or it rots |
-| A/B slots | two full slots, bootloader picks by a persisted flag | safe rollback, ~2× media; needs a bootloader-writable slot marker |
+| Single + recovery | one production slot, one minimal recovery slot | simple, smaller; recovery path rots unless exercised |
+| A/B slots | two full slots, bootloader picks by a persisted flag | safe rollback, ~2× media; needs a bootloader-writable marker |
 | A/B + shared data | as above with a separate persistent partition | usual production choice |
 | Delta/OSTree | filesystem-level versioning | efficient over the air, more moving parts |
 
-Framework layers exist for each (`meta-rauc`, `meta-swupdate`, `meta-mender`,
-`meta-updater`). Whichever you pick, the invariants are the same:
+Framework layers: `meta-rauc`, `meta-swupdate`, `meta-mender`, `meta-updater`. Whichever you
+pick, the invariants are the same:
 
-* The slot marker / boot counter must be **written by the bootloader** and must survive a
-  failed rootfs write. Redundant bootloader env or a dedicated raw region.
-* The bootloader must decrement/act on a counter *before* handing off, and the OS must
-  confirm health after boot — otherwise "rollback" never triggers.
-* Test the rollback path in CI by deliberately shipping a broken slot. An untested rollback
-  is not a rollback.
+* The slot marker / boot counter must be **written by the bootloader** and survive a failed
+  rootfs write — redundant bootloader env or a dedicated raw region.
+* The bootloader must act on the counter *before* handing off, and the OS must confirm health
+  after boot — otherwise "rollback" never triggers.
+* Test the rollback path in CI by deliberately shipping a broken slot. An untested rollback is
+  not a rollback.
 * Keep the layout and update backend in the **distro** layer; boards supply device names and
   sizes only.
 
@@ -246,7 +227,7 @@ Framework layers exist for each (`meta-rauc`, `meta-swupdate`, `meta-mender`,
 |---|---|
 | No serial output at all | boot-mode pins/fuses, wrong media, container at wrong offset, UART pinmux in the first-stage DT, wrong baud |
 | First stage prints, then hangs | DDR firmware/timing mismatch, ATF version mismatch, insufficient power |
-| Loader runs, kernel not found | boot script/extlinux paths, partition numbering, filesystem type support compiled out |
+| Loader runs, kernel not found | boot script/extlinux paths, partition numbering, filesystem support compiled out |
 | "Bad magic" loading the kernel | `KERNEL_IMAGETYPE` vs what the loader expects (`Image` vs `zImage` vs `fitImage`) |
 | Kernel starts, silence after "Starting kernel" | wrong DT loaded, or console misconfigured hiding a panic → add `earlycon` |
 | "Waiting for root device" | `root=` wrong, partition index off, storage driver not built in, no `rootwait` |

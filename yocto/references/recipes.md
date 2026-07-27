@@ -1,15 +1,9 @@
----
-name: yocto-recipe-authoring
-description: Writing, upgrading and packaging BitBake recipes — recipe skeleton, naming/PV/PR/PE, SRC_URI fetchers and checksums, S/B/D/WORKDIR, the standard task chain, build-system classes (autotools/cmake/meson/setuptools3/go/cargo/kernel-module), PACKAGECONFIG, PACKAGES/FILES splitting, RDEPENDS, systemd/init scripts, users/groups, update-alternatives, LICENSE and LIC_FILES_CHKSUM, native/nativesdk/BBCLASSEXTEND. Use when creating a new recipe, upgrading a version, splitting packages, or adding a service.
----
-
 # Recipe authoring
 
 ## Skeleton that passes review
 
 ```bitbake
 SUMMARY = "One line, no trailing period, < 80 chars"
-DESCRIPTION = "Longer prose. Optional if SUMMARY says it all."
 HOMEPAGE = "https://example.org/foo"
 BUGTRACKER = "https://example.org/foo/issues"
 SECTION = "console/utils"
@@ -46,21 +40,23 @@ RDEPENDS:${PN} += "bash"
 
 BBCLASSEXTEND = "native nativesdk"
 ```
+(On styhead 5.1+, `file://` entries unpack to `${UNPACKDIR}`, not `${WORKDIR}` — see
+`migration.md`.)
 
 ## Naming and versions
 
-* File name is `<pn>_<pv>.bb` → sets `PN` and `PV`. Lowercase, `-` not `_` in `PN`.
-* `PR = "r1"` — only needed when you change the *output* without changing `PV` and you ship
-  a package feed. Most modern layers omit `PR` entirely (PR server / hash equiv handles it).
-* `PE = "1"` — epoch; use when upstream versioning goes backwards.
+* File name `<pn>_<pv>.bb` sets `PN` and `PV`. Lowercase; `-` not `_` in `PN`.
+* `PR = "r1"` — only when you change the *output* without changing `PV` and you ship a feed.
+  Most modern layers omit `PR` (PR server / hash equivalence handles it).
+* `PE = "1"` — epoch; when upstream versioning goes backwards.
 * Git recipes:
   ```bitbake
   PV = "1.2.3+git${SRCPV}"        # ≤ kirkstone;  newer: PV = "1.2.3+git"
   SRCREV = "0123abcd…"            # pin it. AUTOREV only in development configs.
   SRC_URI = "git://github.com/x/y.git;protocol=https;branch=main"
-  S = "${WORKDIR}/git"            # ≤ scarthgap;  5.0+: S = "${UNPACKDIR}/${BP}" style varies
+  S = "${WORKDIR}/git"            # ≤ scarthgap; 5.0+ conventions vary
   ```
-* Multiple `SRCREV`s: name the URLs and use `SRCREV_<name>`:
+* Multiple `SRCREV`s — name the URLs:
   ```bitbake
   SRC_URI = "git://a;name=main;branch=main git://b;name=sub;destsuffix=git/sub;branch=main"
   SRCREV_main = "…"
@@ -68,13 +64,13 @@ BBCLASSEXTEND = "native nativesdk"
   SRCREV_FORMAT = "main_sub"
   ```
 
-## SRC_URI fetchers and useful params
+## SRC_URI fetchers and params
 
 | Form | Notes |
 |---|---|
 | `https://…/x-${PV}.tar.gz` | needs `SRC_URI[sha256sum]` |
 | `git://host/repo.git;protocol=https;branch=B;tag=T` | `branch=` mandatory (hardknott+) |
-| `file://patch.patch` | found via `FILESPATH`; `;striplevel=`, `;patchdir=`, `;apply=no` |
+| `file://patch.patch` | via `FILESPATH`; `;striplevel=`, `;patchdir=`, `;apply=no` |
 | `file://dir;subdir=x` | copy a directory |
 | `gitsm://…` | git submodules |
 | `svn://`, `hg://`, `npm://`, `crate://`, `gomod://` | language fetchers |
@@ -95,30 +91,10 @@ BBCLASSEXTEND = "native nativesdk"
 | `STAGING_DIR_HOST/NATIVE/TARGET` | sysroots |
 | `DEPLOY_DIR_IMAGE` | `tmp/deploy/images/${MACHINE}` |
 
-Never hardcode `/usr`, `/etc`: use `${bindir}`, `${libdir}`, `${sysconfdir}`,
+Never hardcode `/usr` or `/etc`: use `${bindir}`, `${libdir}`, `${sysconfdir}`,
 `${datadir}`, `${localstatedir}`, `${systemd_system_unitdir}`, `${nonarch_base_libdir}`.
 
-## Task chain
-
-```
-do_fetch → do_unpack → do_patch → do_prepare_recipe_sysroot → do_configure
-  → do_compile → do_install → do_populate_sysroot
-                            → do_package → do_packagedata → do_package_write_{ipk,deb,rpm}
-  → do_populate_lic → do_deploy (deploy class) → do_build
-```
-
-Adding tasks:
-```bitbake
-do_mytask() { … }
-addtask mytask after do_compile before do_install
-do_mytask[dirs]      = "${B}"          # create & cd into
-do_mytask[cleandirs] = "${WORKDIR}/x"  # wipe & create
-do_mytask[noexec]    = "1"             # disable a task
-do_mytask[depends]  += "openssl-native:do_populate_sysroot"
-deltask do_package_qa                  # nuclear; almost always wrong
-```
-
-Overriding: prefer `do_install:append()` / `:prepend()` over redefining the whole task.
+The task chain and `addtask`/task-flag syntax are in `bitbake.md`.
 
 ## Build-system classes
 
@@ -127,7 +103,7 @@ Overriding: prefer `do_install:append()` / `:prepend()` over redefining the whol
 | `autotools`, `autotools-brokensep` | configure.ac; `brokensep` when `${B}` must equal `${S}` |
 | `cmake` (+ `cmake_qemu`) | `EXTRA_OECMAKE` |
 | `meson` | `EXTRA_OEMESON`, `MESON_TARGET` |
-| `pkgconfig` | anything using pkg-config — add it whenever the build calls `pkg-config` |
+| `pkgconfig` | anything calling `pkg-config` — add it whenever the build does |
 | `setuptools3` / `python_setuptools_build_meta` / `python_poetry_core` / `flit_core` | Python |
 | `go` / `go-mod` | Go; needs vendored modules or `gomod://` |
 | `cargo` / `cargo-update-recipe-crates` | Rust |
@@ -137,27 +113,23 @@ Overriding: prefer `do_install:append()` / `:prepend()` over redefining the whol
 | `bin_package` | prebuilt binaries — no configure/compile, just install |
 | `native`, `nativesdk`, `cross`, `crosssdk` | via `BBCLASSEXTEND` |
 | `useradd`, `systemd`, `update-rc.d`, `update-alternatives` | integration |
-| `allarch` | arch-independent content (scripts, data) — **not** if it ships ELF or depends on arch-specific paths |
+| `allarch` | arch-independent content — **not** if it ships ELF or arch-specific paths |
 | `deploy` | put artifacts in `DEPLOY_DIR_IMAGE` via `do_deploy` |
 | `externalsrc` | build from a path outside the build dir (devtool uses this) |
-| `insane` | QA (auto-inherited) |
 
-For a pure "no build system" recipe just define `do_install()` and add
-`INHIBIT_DEFAULT_DEPS = "1"` if it genuinely needs no toolchain.
+For a "no build system" recipe, define `do_install()` and add `INHIBIT_DEFAULT_DEPS = "1"`
+if it genuinely needs no toolchain.
 
-## PACKAGECONFIG — the right way to expose options
+## PACKAGECONFIG
 
 ```bitbake
-PACKAGECONFIG[<feature>] = "<enable-opts>,<disable-opts>,<build-deps>,<runtime-deps>,<runtime-recommends>,<conflicting-features>"
+PACKAGECONFIG[<feature>] = "<enable>,<disable>,<build-deps>,<rdeps>,<rrecommends>,<conflicts>"
 PACKAGECONFIG ??= "a b"
 PACKAGECONFIG:append:has-gpu = " gpu"
-```
-Tie to features rather than hardcoding:
-```bitbake
 PACKAGECONFIG ??= "${@bb.utils.filter('DISTRO_FEATURES', 'wayland x11 systemd', d)}"
 ```
-Never write `EXTRA_OECONF:append = " --enable-x"` for something a downstream layer might
-want off — make it a PACKAGECONFIG.
+Never write `EXTRA_OECONF:append = " --enable-x"` for something a downstream layer might want
+off — make it a PACKAGECONFIG.
 
 ## Packaging and splitting
 
@@ -169,18 +141,16 @@ FILES:${PN}-dev  += "${libdir}/foo/*.la"
 CONFFILES:${PN}   = "${sysconfdir}/foo.conf"   # preserved on upgrade
 ALLOW_EMPTY:${PN} = "1"                        # ship an empty meta-package
 ```
-
-Rules:
-* Order in `PACKAGES` matters — **first match wins**, left to right. Put narrow packages
+* Order in `PACKAGES` matters — **first match wins**, left to right. Narrow packages
   (`-tools`) before `${PN}`.
 * Split by *when it is needed*: runtime vs `-dev` (headers, `.so` symlink, `.pc`, cmake
   files) vs `-staticdev` (`.a`) vs `-dbg` (auto) vs `-doc` vs `-locale`.
-* Auto-split helpers: `PACKAGES_DYNAMIC = "^${PN}-plugin-.*"` plus
-  `do_split_packages()` in a `python populate_packages:prepend()`.
-* `PACKAGE_ARCH`: default is `TUNE_PKGARCH`. Set `PACKAGE_ARCH = "${MACHINE_ARCH}"` when
-  output depends on the machine (this is what forces a per-machine rebuild). meta-<soc-vendor>
-  automates this via `fsl-dynamic-packagearch.bbclass`.
-* `RDEPENDS` must name **packages**. Verify: `oe-pkgdata-util list-pkgs | grep foo`.
+* Auto-split: `PACKAGES_DYNAMIC = "^${PN}-plugin-.*"` plus `do_split_packages()` in a
+  `python populate_packages:prepend()`.
+* `PACKAGE_ARCH` defaults to `TUNE_PKGARCH`. Set `${MACHINE_ARCH}` when the output depends on
+  the machine — this is what forces a per-machine rebuild. See `layers-bsp.md` for the
+  SoC-family middle ground.
+* `RDEPENDS` must name **packages**: `oe-pkgdata-util list-pkgs | grep foo`.
 
 ## Services, users, alternatives
 
@@ -206,35 +176,28 @@ ALTERNATIVE_LINK_NAME[vi] = "${bindir}/vi"
 ALTERNATIVE_TARGET[vi] = "${bindir}/vim"
 ALTERNATIVE_PRIORITY = "100"
 ```
+To support both init systems, inherit both classes — they are no-ops when the feature is
+absent — or guard with `bb.utils.contains('DISTRO_FEATURES','systemd',…)`.
 
-Support both init systems where the layer targets both:
-`SYSTEMD_SERVICE` guarded by `bb.utils.contains('DISTRO_FEATURES','systemd',…)`, or
-just inherit both classes — the classes are no-ops when the feature is absent.
-
-Post-install scripts:
 ```bitbake
-pkg_postinst_ontarget:${PN}() {   # runs on first boot (needed if it touches the live system)
-    systemctl daemon-reload
-}
-pkg_postinst:${PN}() {            # runs at rootfs time if possible, else first boot
-    :
-}
+pkg_postinst_ontarget:${PN}() { systemctl daemon-reload }   # first boot
+pkg_postinst:${PN}() { : }                                  # rootfs time if possible
 ```
-`read-only-rootfs` images fail if any `pkg_postinst` defers to the target. Prefer
-`_ontarget` only when truly required.
+`read-only-rootfs` images fail if any `pkg_postinst` defers to the target. Use `_ontarget`
+only when truly required.
 
 ## Licensing
 
 * `LICENSE` uses SPDX identifiers joined with `&` (all apply) and `|` (choice):
-  `LICENSE = "GPL-2.0-only & LGPL-2.1-or-later"`. Old-style `GPLv2` was renamed to
-  `GPL-2.0-only` in kirkstone — match the tree.
-* `LIC_FILES_CHKSUM` pins the license text so a silent relicense breaks the build. Point at
-  `COPYING`/`LICENSE`, or at the header block of a source file with
-  `;beginline=;endline=;md5=`. Get the md5 by building once and reading the error.
-* Per-package licensing: `LICENSE:${PN}-foo = "MIT"`.
-* Proprietary/EULA content: `LICENSE_FLAGS = "commercial"` (newer:
-  `LICENSE_FLAGS = "<name>"` + `LICENSE_FLAGS_ACCEPTED` in local.conf).
-* `NO_GENERIC_LICENSE[<lic>] = "path/in/src"` for non-standard license texts.
+  `LICENSE = "GPL-2.0-only & LGPL-2.1-or-later"`. Old-style `GPLv2` was renamed in kirkstone
+  — match the tree.
+* `LIC_FILES_CHKSUM` pins the licence text so a silent relicense breaks the build. Point at
+  `COPYING`/`LICENSE`, or a source header block with `;beginline=;endline=;md5=`. Get the md5
+  by building once and reading the error.
+* Per-package: `LICENSE:${PN}-foo = "MIT"`.
+* Proprietary/EULA: `LICENSE_FLAGS = "<name>"` + `LICENSE_FLAGS_ACCEPTED` in local.conf
+  (older trees: `LICENSE_FLAGS = "commercial"`).
+* `NO_GENERIC_LICENSE[<lic>] = "path/in/src"` for non-standard licence texts.
 
 ## Upgrading a recipe
 
@@ -242,24 +205,21 @@ pkg_postinst:${PN}() {            # runs at rootfs time if possible, else first 
 devtool upgrade <pn> -V <newver>     # fetches, rebases patches, drops recipe in workspace
 devtool build <pn>
 devtool finish <pn> ../meta-mylayer  # writes back, regenerates patches
-# Fleet-wide:
-devtool check-upgrade-status         # what has newer upstream releases
+devtool check-upgrade-status         # fleet-wide: what has newer upstream releases
 ```
-After upgrade always: re-verify `LIC_FILES_CHKSUM`, drop patches now upstream (check with
-`git log --oneline` in the workspace), re-check `PACKAGECONFIG` options still exist
-(`unknown-configure-option` QA catches removals), and diff the shipped file list:
-```bash
-oe-pkgdata-util list-pkg-files -p <pn>   # before/after
-```
+After every upgrade: re-verify `LIC_FILES_CHKSUM`; drop patches now upstream; re-check
+`PACKAGECONFIG` options still exist (`unknown-configure-option` QA catches removals); and
+diff the shipped file list with `oe-pkgdata-util list-pkg-files -p <pn>` before/after.
 
 ## native / nativesdk / multilib
 
 * `BBCLASSEXTEND = "native nativesdk"` generates `<pn>-native` and `nativesdk-<pn>`.
-* Differ per variant with `CLASSOVERRIDE`: `DEPENDS:class-native = "…"`,
-  `do_install:append:class-target() {…}`.
+* Differ per variant with `CLASSOVERRIDE`: `DEPENDS:class-native`,
+  `do_install:append:class-target()`.
 * A `-native` recipe must not depend on target sysroot content.
-* Multilib: `MULTILIBS = "multilib:lib32"`, `DEFAULTTUNE:virtclass-multilib-lib32 = "armv7athf-neon"`;
-  packages get a `lib32-` prefix. Recipes needing awareness use `MLPREFIX`.
+* Multilib: `MULTILIBS = "multilib:lib32"`,
+  `DEFAULTTUNE:virtclass-multilib-lib32 = "armv7athf-neon"`; packages get a `lib32-` prefix.
+  Recipes needing awareness use `MLPREFIX`.
 
 ## Review checklist
 
@@ -272,4 +232,4 @@ oe-pkgdata-util list-pkg-files -p <pn>   # before/after
 - [ ] optional features are `PACKAGECONFIG`, not hardcoded
 - [ ] `COMPATIBLE_MACHINE` set if hardware-specific
 - [ ] `PACKAGE_ARCH` correct (machine-specific output → `${MACHINE_ARCH}`)
-- [ ] builds clean from scratch: `bitbake <pn> -c cleansstate && bitbake <pn>`
+- [ ] builds clean: `bitbake <pn> -c cleansstate && bitbake <pn>`
