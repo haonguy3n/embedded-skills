@@ -1,6 +1,16 @@
-# Embedded Linux / Yocto skill
+# Embedded skills
 
-A single Claude Code **skill** encoding senior-level Yocto / BitBake / kernel / BSP practice.
+Claude Code **skills** for embedded Linux work. Each top-level folder is one skill (`<name>/SKILL.md` plus its
+`references/` and `assets/`); `install.sh` links them all.
+
+| Skill | Covers |
+|---|---|
+| [`yocto`](yocto/SKILL.md) | Yocto / BitBake / kernel / BSP practice (below) |
+| [`cpp-house-rules`](cpp-house-rules/SKILL.md) | House rules for modern C++ (C++20/23) services on embedded Linux (below) |
+
+## Yocto / BitBake
+
+A **skill** encoding senior-level Yocto / BitBake / kernel / BSP practice.
 
 It is **platform-neutral**. It was written by studying how the Yocto Project reference
 documentation and the major upstream BSP layers — `meta-freescale`/`meta-imx` (NXP),
@@ -11,7 +21,7 @@ are named only where they are cited as evidence that a pattern is real and battl
 
 ## Install
 
-Skills are discovered from `~/.claude/skills/<name>/SKILL.md`. Symlink it:
+Skills are discovered from `~/.claude/skills/<name>/SKILL.md`. Symlink them:
 
 ```bash
 ./install.sh                           # symlinks into ~/.claude/skills
@@ -38,6 +48,31 @@ a routing table. Everything else lives in `references/`, loaded only when the ta
 | [`testing.md`](yocto/references/testing.md) | ptest, testimage, oeqa cases, oe-selftest, buildhistory gates, CI |
 | [`migration.md`](yocto/references/migration.md) | Release map, the 3.4 override conversion, per-release breaking changes |
 | [`bitbake.md`](yocto/references/bitbake.md) | Deeper BitBake: Python/datastore, dependency kinds, signatures, task chain |
+
+## C++ house rules
+
+`cpp-house-rules` captures the coding rules, structure and process of a production C++23 camera service (Jetson
+Orin, GStreamer, ONVIF) that was also written to be learned from. Use it to write or review C++ in a project that
+follows these rules, or to set one up:
+
+- **Structure:** one library per module (`Libs/<Name>/{include,src,test}`), one class per file, dependencies pointing
+  down a layer list, one composition root that builds the object graph.
+- **Naming:** PascalCase, `m_`/`mk_`/`s_`/`k_` prefixes and Hungarian letters (`b p r o`), `_t` types, `I` interfaces,
+  trailing `_` on private methods; enforced by clang-tidy.
+- **Headers that teach:** every class names its role (Manager, Controller, Service, Adapter, ...) and its design
+  pattern, and why; every public method documents its failure case.
+- **Behaviour:** errors as `std::expected`, nothing throws; functions of at most 30 lines; explicit ownership; threads
+  only from one threading library with bounded queues; one single home for every shared concern; machine differences
+  behind one platform interface.
+- **Proof and process:** an assert-based self-check per piece of logic, a static-analysis gate that must print
+  "clean", small verified commits, measurements before claims.
+
+| File | Covers |
+|---|---|
+| [`SKILL.md`](cpp-house-rules/SKILL.md) | The rules on one page with their reasons, bootstrapping a project, a review checklist |
+| [`references/cpp-rules.md`](cpp-house-rules/references/cpp-rules.md) | The full rule book: layout, naming, header docs, class design, roles, patterns, ownership, threading, errors, gate, tests |
+| [`references/process.md`](cpp-house-rules/references/process.md) | Commits, clean-worktree verification, branches and tags, measuring, writing, safety on hardware |
+| [`assets/`](cpp-house-rules/assets/) | `.clang-format`, `.clang-tidy`, the `add_self_check` CMake helper, a generic `check.sh` gate |
 
 ## Release-syntax note
 

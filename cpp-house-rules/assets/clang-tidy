@@ -1,0 +1,80 @@
+# The C++ gate tools/cam check runs (docs/CODING-GUIDELINES.md §13): bug finders, plus the house rules clang-tidy
+# can encode (naming, the 30-line function, the rule of five, explicit constructors). A check is off when it fights the
+# house style or GLib, never to hide a bug; the reason is listed here. No inline comments inside the Checks string.
+#   style the guidelines chose:  nodiscard, trailing return types, nested namespaces, designated initializers, `{}` member
+#                                init, nested ?:, else after return, uppercase literal suffixes, magic numbers, name length
+#   GLib/GStreamer:              gboolean is int (implicit-bool-conversion); flag enums hold OR-ed values (EnumCastOutOfRange)
+#   boost::asio:                 its error_code overloads return the code they also fill in (CheckedReturnTypes below)
+#   bounded parsers:             sscanf with field widths, atoi on systemd's/swupdate's own numbers (string-to-number)
+#   the ItemFilter parser:       recursive by design, depth-capped (no-recursion)
+#   nothing throws:              std::print throws on a write error, printf does not (use-std-print)
+#   const by the compiler only:  a Set* that changes hardware through a handle is not const (make-member-function-const)
+---
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-narrowing-conversions,
+  -bugprone-unchecked-string-to-number-conversion,
+  clang-analyzer-*,
+  -clang-analyzer-osx.*,
+  -clang-analyzer-optin.osx.*,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  concurrency-*,
+  performance-*,
+  -performance-enum-size,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  -misc-unused-parameters,
+  -misc-no-recursion,
+  -misc-use-anonymous-namespace,
+  -misc-const-correctness,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  -modernize-use-designated-initializers,
+  -modernize-use-nodiscard,
+  -modernize-concat-nested-namespaces,
+  -modernize-use-std-print,
+  readability-*,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-uppercase-literal-suffix,
+  -readability-else-after-return,
+  -readability-convert-member-functions-to-static,
+  -readability-redundant-member-init,
+  -readability-avoid-nested-conditional-operator,
+  -readability-math-missing-parentheses,
+  -readability-implicit-bool-conversion,
+  -readability-make-member-function-const,
+  cppcoreguidelines-special-member-functions,
+  google-explicit-constructor,
+WarningsAsErrors: '*'
+CheckOptions:
+  bugprone-unused-return-value.AllowCastToVoid: true
+  bugprone-unused-return-value.CheckedReturnTypes: '::std::error_code;::std::error_condition;::std::errc;::std::expected'
+  concurrency-mt-unsafe.FunctionSet: glibc
+  readability-function-cognitive-complexity.IgnoreMacros: true
+  readability-function-size.LineThreshold: 31
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.StructSuffix: _t
+  readability-identifier-naming.StructIgnoredRegexp: '^soap$'
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumSuffix: _t
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypeAliasSuffix: _t
+  readability-identifier-naming.FunctionCase: CamelCase
+  readability-identifier-naming.FunctionIgnoredRegexp: '^swap$|_(ns|us|ms|s)$'
+  readability-identifier-naming.MethodCase: CamelCase
+  readability-identifier-naming.PrivateMethodCase: CamelCase
+  readability-identifier-naming.PrivateMethodSuffix: _
+  readability-identifier-naming.ProtectedMethodIgnoredRegexp: '^[A-Z][A-Za-z0-9]*_?$'
+  readability-identifier-naming.PrivateMemberPrefix: m_
+  readability-identifier-naming.ProtectedMemberPrefix: m_
+  readability-identifier-naming.ConstantMemberPrefix: mk_
+  readability-identifier-naming.ClassConstantPrefix: k_
+  readability-identifier-naming.GlobalConstantPrefix: k_
+...

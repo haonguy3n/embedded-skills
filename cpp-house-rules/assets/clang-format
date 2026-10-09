@@ -1,0 +1,203 @@
+# Disable all languages other than C/C++
+Language:      Json
+DisableFormat: true
+---
+Language:      Proto
+DisableFormat: true
+---
+Language:      JavaScript
+DisableFormat: true
+---
+Language:      TextProto
+DisableFormat: true
+---
+Language:        Cpp
+Standard:        Latest
+
+# Warning: For clang-format-15 I've found that there are some order dependencies 
+# in this file.  Modifying the order but leaving the values the same might produce
+# different results.
+
+ColumnLimit:     120
+
+AccessModifierOffset: -4
+
+AlignAfterOpenBracket: AlwaysBreak
+# AlignArrayOfStructures: Right
+# Left causes segfault in tool, right looks awful
+# AlignConsecutiveAssignments: 
+  # Enabled: true
+  # AcrossEmptyLines: true
+  # AcrossComments: true
+  # AlignCompound: true
+  # PadOperators: true
+AlignConsecutiveAssignments: false
+AlignConsecutiveBitFields: true
+AlignConsecutiveDeclarations: false
+# AlignConsecutiveMacros: false
+AlignConsecutiveMacros: 
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignEscapedNewlines: Left
+AlignOperands: false
+AlignTrailingComments: false
+
+AllowAllArgumentsOnNextLine: true
+# JHA TODO - moving this next line in the file causes strange behavior
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: None
+AllowShortLoopsOnASingleLine: false
+
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: true
+
+BinPackArguments: false
+BinPackParameters: false
+ExperimentalAutoDetectBinPacking: false
+
+BitFieldColonSpacing: Both
+
+# Braces
+BraceWrapping:
+  AfterCaseLabel:  false
+  AfterClass:      true
+  AfterControlStatement: Always
+  AfterEnum:       true
+  AfterFunction:   true
+  AfterNamespace:  true
+  AfterObjCDeclaration: true
+  AfterStruct:     true
+  AfterUnion:      true
+  AfterExternBlock: true
+  BeforeCatch:     true
+  BeforeElse:      true
+  BeforeLambdaBody: true
+  IndentBraces:    false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# Breaks
+BreakBeforeBinaryOperators: None
+# Custom here enables the fields we had in BraceWrapping, above
+BreakBeforeBraces: Custom
+BreakBeforeConceptDeclarations: Always
+BreakBeforeInheritanceComma: true
+BreakBeforeTernaryOperators: false
+BreakInheritanceList: BeforeColon
+BreakConstructorInitializersBeforeComma: true
+BreakConstructorInitializers: BeforeColon
+BreakStringLiterals: true
+
+CompactNamespaces: false
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+
+Cpp11BracedListStyle: true
+
+DeriveLineEnding: true
+DerivePointerAlignment: false
+
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: Leave
+
+FixNamespaceComments: true
+
+IncludeBlocks:   Preserve
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: false
+IndentExternBlock: true
+IndentGotoLabels: false
+IndentPPDirectives: None
+IndentRequiresClause: false
+IndentWidth:     4
+IndentWrappedFunctionNames: false
+InsertBraces: true
+InsertNewlineAtEOF: true
+InsertTrailingCommas: Wrapped
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+LambdaBodyIndentation: Signature
+
+MaxEmptyLinesToKeep: 1
+
+NamespaceIndentation: None
+
+PackConstructorInitializers: Never
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 20
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+# turning this on to any value makes some changes we might or might not want
+# PenaltyBreakOpenParenthesis: 2
+PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000
+# turning this on to any value makes some changes we might or might not want
+# PenaltyIndentedWhitespace: 100
+PenaltyReturnTypeOnItsOwnLine: 1000
+
+PointerAlignment: Left
+# NOTE: This is another one which might produce incorrect results - turn on separately 
+# and review all changes
+QualifierAlignment: Right
+# NOTE: intentionally leaving volatile out
+# QualifierOrder: ['inline', 'static', 'type', 'const' ]
+
+ReferenceAlignment: Left
+ReflowComments:  true
+# RemoveBracesLLVM -NO!
+# RemoveSemicolon - doesn't seem worth the change
+RequiresClausePosition: OwnLine
+
+# This adds a blank line before all function defs, classes and namespaces.  
+# Sometimes that's good, sometimes it sucks.
+# SeparateDefinitionBlocks: Always
+# Controls what clang-format considers a "short" namespace - it won't put the 
+# trailing comment on a short namespace
+ShortNamespaceLines: 1
+# Includes
+SortIncludes:    CaseSensitive
+SortUsingDeclarations: true
+
+# Spaces
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles:  false
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: true
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: 1
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+TabWidth:        4
+
+UseCRLF: false
+UseTab:          Always
