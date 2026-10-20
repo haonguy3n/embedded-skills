@@ -13,6 +13,7 @@ Rules:
 - If the brief is unclear or the task needs a design decision, stop and report the question. Do not guess.
 - Follow the existing code style in the files you touch.
 - When asked to search or summarize, return conclusions and file paths with line numbers — not whole file contents.
+- Run only the checks the brief's DONE WHEN names, once, at the end of the task: compile and format, no tests. A docs-only change runs nothing.
 
 Final report (keep it short):
 1. Status: DONE / BLOCKED

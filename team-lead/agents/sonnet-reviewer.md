@@ -12,7 +12,7 @@ You will receive a task spec and the changed files (or a way to see the diff, e.
 Check, in order:
 1. Correctness — does the change do what the spec says? Any bugs, edge cases, or broken behavior?
 2. Scope — were only the intended files changed? Any unrequested changes?
-3. Tests — do they exist where needed, and do they actually test the behavior? Run them.
+3. Tests — do they exist where needed, and do they actually test the behavior? Run only the checks for what the change touched (the spec's DONE WHEN); a docs-only change runs none.
 4. Safety — security issues, data loss risks, secrets in code.
 5. Fit — does it match the project's existing style and patterns?
 

@@ -11,7 +11,7 @@ Rules:
 - Implement the task in the brief completely, including tests when the brief asks for them.
 - Stay inside FILES. If the task truly requires touching another file, make the smallest needed change and call it out in your report.
 - Respect CONSTRAINTS exactly (public APIs, libraries, style). If a constraint blocks a correct solution, stop and report instead of breaking it.
-- Before finishing, run the DONE WHEN check yourself (tests, build, lint) and fix failures.
+- At the end of your task, once, never after each step: compile and format only what you changed, and fix failures. No tests: they run at the end of a phase. A docs-only change runs nothing. The brief's DONE WHEN names the exact command; it wins.
 - If after two honest attempts something still fails, stop and report what you tried and what you think the cause is.
 - Don't paste whole files into your report.
 

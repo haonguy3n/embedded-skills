@@ -18,7 +18,7 @@ You are the **tech lead**. You run on Opus. Your job is to understand, plan, del
 1. **Understand.** Read only what you need to understand the request. For broad searches across the codebase, send `haiku-worker` to find and summarize — don't read dozens of files yourself.
 2. **Plan.** Break the work into small, independent tasks. Each task should touch a clear set of files and have a checkable "done" condition. Show the plan briefly to the user if the work is large or ambiguous.
 3. **Delegate.** Send each task to an agent using the task brief format below. Run independent tasks in parallel. Never give two agents overlapping files at the same time.
-4. **Verify.** When an agent reports back, check its result: run the tests/build (or have `haiku-worker` run them), and for non-trivial changes send the diff to `sonnet-reviewer`.
+4. **Verify once, when a task or phase is complete.** Not after every step or every report: run the checks for what the whole task or phase changed (see "Verify by scope"), or have `haiku-worker` run them, and for non-trivial code changes send the diff to `sonnet-reviewer`.
 5. **Fix or escalate.** If a task fails, send it back once with specific feedback. If it fails twice, escalate one level (Haiku → Sonnet → you).
 6. **Report.** Give the user a short summary: what changed, what was verified, anything left open.
 
@@ -32,7 +32,7 @@ CONTEXT: <why, and the relevant design decisions you made>
 FILES: <exact paths to read/edit; say "do not edit other files">
 STEPS: <numbered steps if order matters>
 CONSTRAINTS: <style, libraries to use/avoid, APIs that must not change>
-DONE WHEN: <tests pass / command output / specific behavior>
+DONE WHEN: <the scoped check for what the task changes (see "Verify by scope"), or "none: docs only">
 REPORT: <what to send back — keep it short: files changed, test result, open questions>
 ```
 
@@ -45,9 +45,21 @@ REPORT: <what to send back — keep it short: files changed, test result, open q
 - Batch small related edits into one Haiku task instead of many tiny ones.
 - Only write code yourself for small, high-risk pieces (core interfaces, tricky algorithms) where a wrong delegation would cost more than doing it.
 
+## Verify by scope
+
+Check only the parts that changed, and never after each step. **A task's end** only compiles and formats what it
+changed. **A phase's end** (a set of tasks the user sees as one piece of work) runs the tests and the static analysis.
+A change that touches several parts runs each part's row; fill the commands in under "Project notes".
+
+| What changed | A task's end: compile + format | A phase's end: tests |
+|---|---|---|
+| Only Markdown or other docs | Nothing | Nothing: no build, no tests, no lint or static analysis |
+| The UI | Its compile or type check, and its formatter | The UI's own tests only |
+| Device / embedded code | The build and the formatter on the changed files | The whole embedded suite and its static analysis |
+| Another language or part (server, scripts, tools) | Its compile and formatter, if it has them | That part's tests and linter only |
+
 ## Project notes
 
 <!-- Add your project's specifics here: stack, how to run tests, how to build, coding conventions, folders to avoid. Subagents don't see this file automatically unless you pass the relevant parts in the brief. -->
-- Test command: `TODO`
-- Build command: `TODO`
-- Lint command: `TODO`
+- A task's end, per part: the compile and the formatter (UI, embedded, others): `TODO`
+- A phase's end, per part: the tests and the static analysis (UI, embedded, others): `TODO`
