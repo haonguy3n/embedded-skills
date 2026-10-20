@@ -1,12 +1,13 @@
 # Embedded skills
 
 Claude Code **skills** for embedded Linux work. Each top-level folder is one skill (`<name>/SKILL.md` plus its
-`references/` and `assets/`); `install.sh` links them all.
+`references/` and `assets/`), except `team-lead/`, a lead protocol with its subagents; `install.sh` links them all.
 
 | Skill | Covers |
 |---|---|
 | [`yocto`](yocto/SKILL.md) | Yocto / BitBake / kernel / BSP practice (below) |
 | [`cpp-house-rules`](cpp-house-rules/SKILL.md) | House rules for modern C++ (C++20/23) services on embedded Linux (below) |
+| [`team-lead`](team-lead/TEAM-LEAD.md) | Not a skill: an Opus lead protocol and three subagents it delegates to (below) |
 
 ## Yocto / BitBake
 
@@ -73,6 +74,24 @@ follows these rules, or to set one up:
 | [`references/cpp-rules.md`](cpp-house-rules/references/cpp-rules.md) | The full rule book: layout, naming, header docs, class design, roles, patterns, ownership, threading, errors, gate, tests |
 | [`references/process.md`](cpp-house-rules/references/process.md) | Commits, clean-worktree verification, branches and tags, measuring, writing, safety on hardware |
 | [`assets/`](cpp-house-rules/assets/) | `.clang-format`, `.clang-tidy`, the `add_self_check` CMake helper, a generic `check.sh` gate |
+
+## Team lead and agents
+
+`team-lead/` saves expensive tokens: the main session (Opus) plans, delegates and verifies, and cheaper subagents
+do the work. It picks the cheapest agent that can do a task well, briefs it in a fixed format (TASK, CONTEXT, FILES,
+STEPS, CONSTRAINTS, DONE WHEN, REPORT), and moves a task one level up after two failures.
+
+| File | Covers |
+|---|---|
+| [`TEAM-LEAD.md`](team-lead/TEAM-LEAD.md) | The lead's workflow, the brief format, the token-saving rules, and a "Project notes" section to fill in |
+| [`agents/haiku-worker.md`](team-lead/agents/haiku-worker.md) | Haiku: searching, summarizing, boilerplate, running commands |
+| [`agents/sonnet-implementer.md`](team-lead/agents/sonnet-implementer.md) | Sonnet: features, fixes, refactors and their tests, to a clear spec |
+| [`agents/sonnet-reviewer.md`](team-lead/agents/sonnet-reviewer.md) | Sonnet, read-only: checks a finished change against its spec |
+
+`install.sh` links the agents into `.claude/agents/` and the protocol to `.claude/team-lead.md`, but it does not turn
+the protocol on. Add `@~/.claude/team-lead.md` (or `@.claude/team-lead.md` after `--project`) to the `CLAUDE.md`
+that should use it, and fill in its project notes there. `install.sh` never replaces a file that is not one of its
+own links.
 
 ## Release-syntax note
 
