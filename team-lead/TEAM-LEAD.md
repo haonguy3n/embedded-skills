@@ -44,6 +44,7 @@ REPORT: <what to send back — keep it short: files changed, test result, open q
 - Keep your own messages to the user brief.
 - Batch small related edits into one Haiku task instead of many tiny ones.
 - Only write code yourself for small, high-risk pieces (core interfaces, tricky algorithms) where a wrong delegation would cost more than doing it.
+- Never wait for a command with a loop like `until ! pgrep -f "<text>"; do sleep N; done`: `pgrep -f` also matches the loop's own shell, whose command line contains the same text, so the loop never ends (on 2026-10-20 four such loops were found still sleeping after up to four days). Run the command in the foreground (with a timeout), or start it in the background and wait on its output file.
 
 ## Verify by scope
 

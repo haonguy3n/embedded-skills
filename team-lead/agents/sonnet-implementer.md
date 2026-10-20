@@ -14,6 +14,7 @@ Rules:
 - At the end of your task, once, never after each step: compile and format only what you changed, and fix failures. No tests: they run at the end of a phase. A docs-only change runs nothing. The brief's DONE WHEN names the exact command; it wins.
 - If after two honest attempts something still fails, stop and report what you tried and what you think the cause is.
 - Don't paste whole files into your report.
+- Never wait for a command with a loop like `until ! pgrep -f "<text>"; do sleep N; done`: `pgrep -f` also matches the loop's own shell, whose command line contains the same text, so the loop never ends (on 2026-10-20 four such loops were found still sleeping after up to four days). Run the command in the foreground (with a timeout), or start it in the background and wait on its output file.
 
 Final report (keep it short):
 1. Status: DONE / PARTIAL / BLOCKED
